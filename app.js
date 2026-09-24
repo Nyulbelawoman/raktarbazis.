@@ -328,7 +328,7 @@ function resolveAmbiguity() {
   $('#ambig-text').innerHTML = `A <b>„${esc(job.term)}"</b> (${fmtQty(job.qty)}) több termékre is illik. Kattints a megfelelőre:`;
   $('#ambig-grid').innerHTML = cands.map(x => `
     <div class="ambig-card" data-pick="${x.it.id}">
-      <div class="card-img">${x.it.img ? `<img src="${x.it.img}" style="width:100%;height:100%;object-fit:cover"/>` : `<span>${x.it.emoji || '📦'}</span>`}</div>
+      <div class="card-img">${x.it.img ? `<img src="${x.it.img}" alt=""/>` : `<span>${x.it.emoji || '📦'}</span>`}</div>
       <div class="ambig-name">${esc(x.it.name)}</div>
       <div class="ambig-qty">📍 ${locLabel(x.it.loc)} · raktáron ${fmtQty(x.it.qty)} ${x.it.unit}</div>
     </div>`).join('');
