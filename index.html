@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#0f1720" />
+  <title>RaktárBázis — karbantartó raktár</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ============ BELÉPÉS ============ -->
+  <div id="login-view" class="view">
+    <div class="login-card">
+      <div class="logo">🏭 Raktár<span>Bázis</span></div>
+      <p class="login-sub">Karbantartó raktár · gyors készlet-ellenőrzés</p>
+
+      <div class="login-role" id="login-role-buttons">
+        <button class="role-btn role-worker" data-role="worker" data-user="w1">
+          <span class="role-ico">👷</span>
+          <span class="role-label">Munkásként belépés</span>
+          <span class="role-hint">Katalógus · kosár · kivétel</span>
+        </button>
+        <button class="role-btn role-boss" data-role="boss" data-user="b1">
+          <span class="role-ico">🧑‍💼</span>
+          <span class="role-label">Főnökként belépés</span>
+          <span class="role-hint">Teljes admin + riasztások</span>
+        </button>
+      </div>
+
+      <div class="login-users">
+        <label>Demo felhasználó:</label>
+        <select id="login-user-select"></select>
+      </div>
+
+      <p class="login-note">Demo mód — a „backend" a böngészőben fut (kamu adatbázis). Minden változás a localStorage-ban marad meg.</p>
+    </div>
+  </div>
+
+  <!-- ============ ALKALMAZÁS ============ -->
+  <div id="app-view" class="view hidden">
+    <!-- Fejléc -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="logo logo-small" id="logo-home" title="Kezdőlap (katalógus)">🏭 Raktár<span>Bázis</span></span>
+      </div>
+
+      <div class="topbar-search">
+        <input type="search" id="search-input" placeholder="Keresés… pl. „wagó", „tediszár", „16A kismegszakító"" autocomplete="off" />
+        <button class="icon-btn" id="clear-search" title="Törlés">✕</button>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="icon-btn" id="history-btn" title="Saját kivételeim">📋</button>
+        <div class="user-wrap">
+          <button class="icon-btn user-btn" id="user-menu-btn" title="Nézet váltás">
+            <span id="user-role-ico">👷</span><span class="user-role-name" id="user-role-name">Munkás</span> <span class="caret">▾</span>
+          </button>
+          <div class="user-menu hidden" id="user-menu">
+            <button data-switch="worker">👷 Munkás nézet</button>
+            <button data-switch="boss">🧑‍💼 Főnök nézet</button>
+            <hr />
+            <button id="logout-btn">⏻ Kilépés</button>
+          </div>
+        </div>
+        <button class="cart-btn" id="cart-toggle" title="Kosár">
+          🛒 <span class="cart-count" id="cart-count">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Kategória / helyszín szűrők -->
+    <nav class="filters">
+      <div class="cat-tabs" id="cat-tabs">
+        <button class="cat-tab active" data-cat="all">Mind</button>
+        <button class="cat-tab" data-cat="villany">⚡ Villanyszerelő</button>
+        <button class="cat-tab" data-cat="gepesz">🔧 Gépész</button>
+        <button class="cat-tab" data-cat="komuves">🧱 Kőműves</button>
+        <button class="cat-tab" data-cat="egyeb">📦 Egyéb</button>
+      </div>
+      <div class="location-tabs" id="loc-tabs">
+        <button class="loc-tab active" data-loc="all">Minden hely</button>
+        <button class="loc-tab" data-loc="erno">Ernő utca</button>
+        <button class="loc-tab" data-loc="kalvaria">Kálvária tér</button>
+      </div>
+    </nav>
+
+    <!-- Főnök eszköztár -->
+    <nav class="boss-nav hidden" id="boss-nav">
+      <button class="bnav-btn" data-panel="catalog">🏬 Katalógus</button>
+      <button class="bnav-btn" data-panel="admin">🗂️ Admin (elemek)</button>
+      <button class="bnav-btn" data-panel="chat">💬 Chat (gyors bevitel)</button>
+      <button class="bnav-btn" data-panel="alerts">🔔 Készlethiány & email</button>
+      <button class="bnav-btn" data-panel="inbox">📬 Email fiók</button>
+      <button class="bnav-btn" data-panel="rapport">📊 Havi rapport</button>
+      <button class="bnav-btn" data-panel="audit">🧾 Audit napló</button>
+      <button class="bnav-btn" data-panel="csv">📥 CSV import</button>
+    </nav>
+
+    <!-- Tartalom -->
+    <main class="content">
+      <!-- Katalógus rács -->
+      <section id="catalog-view">
+        <div class="catalog-head">
+          <h2 id="catalog-title">Teljes katalógus</h2>
+          <div class="catalog-meta">
+            <span id="result-count"></span>
+            <span class="legend"><i class="dot dot-green"></i>van raktáron</span>
+            <span class="legend"><i class="dot dot-amber"></i>rendelés alatt</span>
+            <span class="legend"><i class="dot dot-red"></i>nincs</span>
+          </div>
+        </div>
+        <div class="grid" id="item-grid"></div>
+        <div class="empty hidden" id="empty-state">Nincs találat. Próbálj más szót (pl. szlenggel is kereshetsz: „tediszár", „wagó").</div>
+      </section>
+
+      <!-- Saját kivételeim (munkás) -->
+      <section id="history-view" class="hidden">
+        <h2>Saját kivételeim</h2>
+        <p class="muted">Itt csak a saját korábbi kivételeidet látod.</p>
+        <div class="table-wrap">
+          <table class="data-table" id="history-table">
+            <thead><tr><th>Időpont</th><th>Termék</th><th>Mennyiség</th><th>Hibajegyszám</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Főnök panelek -->
+      <section id="panel-admin" class="panel-view hidden"></section>
+      <section id="panel-chat" class="panel-view hidden"></section>
+      <section id="panel-alerts" class="panel-view hidden"></section>
+      <section id="panel-inbox" class="panel-view hidden"></section>
+      <section id="panel-rapport" class="panel-view hidden"></section>
+      <section id="panel-audit" class="panel-view hidden"></section>
+      <section id="panel-csv" class="panel-view hidden"></section>
+    </main>
+  </div>
+
+  <!-- ============ KOSÁR (oldalsáv) ============ -->
+  <div id="cart-drawer" class="drawer">
+    <div class="drawer-head">
+      <h3>🛒 Kosár</h3>
+      <button class="icon-btn" id="cart-close">✕</button>
+    </div>
+
+    <div class="quick-entry">
+      <label>Gyors beírás (szabad szöveg):</label>
+      <textarea id="quick-input" rows="2" placeholder='pl. „3 db wagó, 25 m mbcu 3x2,5, 1 db 16A kismegszakító"'></textarea>
+      <button class="btn btn-ghost" id="quick-parse">Értelmezés & kosárba</button>
+    </div>
+
+    <div class="cart-items" id="cart-items"></div>
+    <div class="cart-empty hidden" id="cart-empty">A kosár üres. Kattints a „Kell" gombra egy terméken.</div>
+
+    <div class="drawer-foot">
+      <div class="cart-summary" id="cart-summary"></div>
+      <button class="btn btn-primary btn-block" id="checkout-btn" disabled>Oké, kiveszem →</button>
+    </div>
+  </div>
+  <div id="drawer-backdrop" class="drawer-backdrop"></div>
+
+  <!-- ============ MODAL: kivétel / hibajegyszám ============ -->
+  <div id="checkout-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Kivétel rögzítése</h3>
+      <p class="muted">A kiválasztott tételek automatikusan levonódnak a készletből.</p>
+      <div id="checkout-list" class="checkout-list"></div>
+      <label class="field">
+        <span>Hibajegyszám / munkaszám / hova használod</span>
+        <input type="text" id="workorder-input" placeholder="pl. WO-2024-117 vagy „Kálvária tér 3. lakás főkapcsoló"" />
+      </label>
+      <label class="field">
+        <span>Megjegyzés (opcionális)</span>
+        <input type="text" id="checkout-note" placeholder="bármi extra" />
+      </label>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="checkout-cancel">Mégse</button>
+        <button class="btn btn-primary" id="checkout-confirm">✅ Kivétel megerősítése</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: bizonytalanság (képpel) ============ -->
+  <div id="ambig-modal" class="modal hidden">
+    <div class="modal-card modal-wide">
+      <h3>Nem vagyok biztos, melyikre gondoltál</h3>
+      <p class="muted" id="ambig-text"></p>
+      <div class="ambig-grid" id="ambig-grid"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="ambig-skip">Kihagyom ezt a tételt</button>
+        <button class="btn btn-ghost" id="ambig-cancel">Mégse</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: elem szerkesztés (főnök) ============ -->
+  <div id="item-modal" class="modal hidden">
+    <div class="modal-card modal-wide">
+      <h3 id="item-modal-title">Elem szerkesztése</h3>
+      <div class="form-grid">
+        <label class="field"><span>Hivatalos név *</span><input id="f-name" /></label>
+        <label class="field"><span>Cikkszám (csak főnök látja)</span><input id="f-sku" /></label>
+        <label class="field"><span>Szlengek / aliasok (vesszővel)</span><input id="f-aliases" /></label>
+        <label class="field"><span>Kategória</span>
+          <select id="f-category">
+            <option value="villany">⚡ Villanyszerelő</option>
+            <option value="gepesz">🔧 Gépész</option>
+            <option value="komuves">🧱 Kőműves</option>
+            <option value="egyeb">📦 Egyéb</option>
+          </select>
+        </label>
+        <label class="field"><span>Mértékegység</span>
+          <select id="f-unit">
+            <option value="db">db</option><option value="m">m</option><option value="csomag">csomag</option>
+            <option value="doboz">doboz</option><option value="kg">kg</option><option value="l">l</option>
+            <option value="tekercs">tekercs</option><option value="pár">pár</option>
+          </select>
+        </label>
+        <label class="field"><span>Jelenlegi mennyiség *</span><input id="f-qty" type="number" step="0.1" /></label>
+        <label class="field"><span>Minimum készlet (riasztási szint)</span><input id="f-min" type="number" step="0.1" /></label>
+        <label class="field"><span>Szállító (csak főnök)</span>
+          <select id="f-supplier"></select>
+        </label>
+        <label class="field"><span>Helyszín</span>
+          <select id="f-location">
+            <option value="erno">Ernő utca</option>
+            <option value="kalvaria">Kálvária tér</option>
+          </select>
+        </label>
+        <label class="field field-check"><input type="checkbox" id="f-isTool" /> <span>Szerszám (csak 0 készletnél riaszt)</span></label>
+        <label class="field field-check"><input type="checkbox" id="f-ordered" /> <span>Rendelés alatt áll</span></label>
+      </div>
+      <div class="image-row">
+        <span class="item-thumb" id="f-thumb-preview">📦</span>
+        <label class="btn btn-ghost">Kép feltöltése
+          <input type="file" id="f-image" accept="image/*" hidden />
+        </label>
+        <button class="btn btn-ghost" id="f-image-reset">Alap emoji</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="item-delete" style="margin-right:auto">🗑️ Törlés</button>
+        <button class="btn btn-ghost" id="item-cancel">Mégse</button>
+        <button class="btn btn-primary" id="item-save">Mentés</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: mennyiség (kosárba) ============ -->
+  <div id="qty-modal" class="modal hidden">
+    <div class="modal-card modal-narrow">
+      <h3>Mennyiség</h3>
+      <div class="qty-product">
+        <span class="item-thumb" id="qty-thumb">📦</span>
+        <div>
+          <div class="qty-product-name" id="qty-name">—</div>
+          <div class="muted" id="qty-stock">—</div>
+        </div>
+      </div>
+      <div class="qty-stepper">
+        <button class="qty-step" id="qty-minus">−</button>
+        <input type="number" id="qty-input" value="1" min="0.1" step="1" inputmode="decimal" />
+        <span class="qty-unit" id="qty-unit">db</span>
+        <button class="qty-step" id="qty-plus">+</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="qty-cancel">Mégse</button>
+        <button class="btn btn-green" id="qty-confirm">🛒 Kosárba</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

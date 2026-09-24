@@ -1,0 +1,9 @@
+node_modules/
+_*.js
+_*.ps1
+smoketest.js
+_validate.js
+_test.js
+*.log
+.env
+.env.*
